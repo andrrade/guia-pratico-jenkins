@@ -5,7 +5,7 @@ pipeline {
     stage('Build Docker Image') {
       steps {
         script {
-          dockerApp = docker.build("andrrade/guia-jenkins:${env.BUILD_ID}", "-f ./src/Dockerfile ./src")
+          dockerApp = docker.build("andrrade/guia-veronez:${env.BUILD_ID}", "-f ./src/Dockerfile ./src")
         }
       }
     }
@@ -22,8 +22,15 @@ pipeline {
     }
     
     stage('Deploy no Kubernetes') {
+      environment {
+        tag_version = "${env.BUILD_ID}"
+      }
       steps {
-        sh 'echo "Executando o comando kubectl apply"'
+        withKubeConfig([credentialsId: 'kubeconfig']) {
+          sh "sed -i 's/{{tag}}/${tag_version}/g' ./k8s/deployment.yaml"
+          sh 'kubectl apply -f k8s/deployment.yaml'
+          sh 'kubectl rollout status deployment/NOME-DO-SEU-DEPLOYMENT'
+        }
       }
     }
   }
